@@ -3,7 +3,6 @@ import {
   Activity,
   AlertTriangle,
   Clock,
-  CreditCard,
   FilterX,
   LayoutDashboard,
   Landmark,
@@ -473,7 +472,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} />
                     <YAxis {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toFixed(1)} L`, "Sanctioned"]} />
+                    <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
                     <Line type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.teal} strokeWidth={2} dot={{ r: 3, fill: C.teal, strokeWidth: 0 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -500,7 +499,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} />
                     <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, "Approval Rate"]} />
+                    <Tooltip formatter={(v: any) => [`${v}%`, "Approval Rate"]} />
                     <Bar dataKey="approvalRate" name="Approval %" fill={C.indigo} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -512,7 +511,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
                     <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`${v}%`]} />
+                    <Tooltip formatter={(v: any) => [`${v}%`]} />
                     <Bar dataKey="collEff" name="Collection Eff." fill={C.teal} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                     <Bar dataKey="npaRate" name="NPA Rate" fill={C.coral} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                   </BarChart>
@@ -623,7 +622,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} />
                     <YAxis {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toFixed(1)} L`, "Sanctioned"]} />
+                    <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
                     <Line type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.indigo} strokeWidth={2} dot={{ r: 3, fill: C.indigo, strokeWidth: 0 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -637,7 +636,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
                     <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`${v}%`]} />
+                    <Tooltip formatter={(v: any) => [`${v}%`]} />
                     <Bar dataKey="collEff" name="Collection Eff." fill={C.teal} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -649,7 +648,7 @@ function App() {
                     <CartesianGrid {...GRID} />
                     <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
                     <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: number) => [`${v}%`]} />
+                    <Tooltip formatter={(v: any) => [`${v}%`]} />
                     <Bar dataKey="npaRate" name="NPA Rate" fill={C.coral} radius={[3, 3, 0, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
