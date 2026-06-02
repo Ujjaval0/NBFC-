@@ -1,0 +1,8 @@
+{
+  "name": "nbfc-dashboard-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd nbfc-dashboard-web && npm install && npm run build && mv dist ../dist"
+  }
+}

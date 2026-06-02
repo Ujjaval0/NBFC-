@@ -1,5 +1,6 @@
 # Node modules and build files
 node_modules/
+dist/
 nbfc-dashboard-web/node_modules/
 nbfc-dashboard-web/dist/
 nbfc-dashboard-web/dist-ssr/
