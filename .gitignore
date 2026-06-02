@@ -1,0 +1,47 @@
+# Node modules and build files
+node_modules/
+nbfc-dashboard-web/node_modules/
+nbfc-dashboard-web/dist/
+nbfc-dashboard-web/dist-ssr/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Outputs
+outputs/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Chrome profiles and browser automation temp files
+*.chrome-profile*/
+.chrome-profile*/
+nbfc-dashboard-web/.chrome-profile*/
+nbfc-dashboard-web/.*chrome-profile*/
+**/.chrome-profile*/
+**/.*chrome-profile*/
+**/chrome-profile*/
+**/chrome-profile-check/
+**/chrome-profile-final/
+**/chrome-profile/
+
+
