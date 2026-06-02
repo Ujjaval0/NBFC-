@@ -10,6 +10,12 @@ import {
   PanelLeft,
   ShieldCheck,
   TrendingUp,
+  Download,
+  ChevronDown,
+  MoreHorizontal,
+  ShoppingBag,
+  Users,
+  HelpCircle
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -160,16 +166,17 @@ function groupCount<T>(rows: T[], fn: (r: T) => string) {
   return Array.from(m, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 }
 
-/* ─── Colors ─── */
+/* ─── Color Palette ─── */
 const C = {
-  teal: "#2a9d8f",
-  slate: "#475569",
+  blue: "#2e90fa",
+  teal: "#0d9488",
+  slate: "#475467",
   indigo: "#6366f1",
-  sage: "#64748b",
-  coral: "#e76f51",
-  amber: "#d4a843",
-  chart: ["#2a9d8f", "#6366f1", "#475569", "#e76f51", "#d4a843", "#8b5cf6"],
-  pie: ["#2a9d8f", "#6366f1", "#64748b", "#e76f51", "#d4a843"],
+  sage: "#667085",
+  coral: "#f04438",
+  amber: "#f79009",
+  chart: ["#6366f1", "#2e90fa", "#0d9488", "#475467", "#f04438", "#f79009", "#8b5cf6"],
+  pie: ["#6366f1", "#2e90fa", "#0d9488", "#667085", "#f04438", "#f79009"],
 };
 
 /* ─── Navigation ─── */
@@ -186,11 +193,11 @@ const NAV: { id: PageId; label: string; icon: typeof LayoutDashboard }[] = [
 /* ═══════════════════════════════════════════
    Shared chart defaults
    ═══════════════════════════════════════════ */
-const GRID = { strokeDasharray: "3 3", stroke: "#f0f0f2", vertical: false };
+const GRID = { strokeDasharray: "3 3", stroke: "#eaecf0", vertical: false };
 const AXIS = { tickLine: false, axisLine: false };
 
 /* ═══════════════════════════════════════════
-   App
+   App Component
    ═══════════════════════════════════════════ */
 function App() {
   const [data, setData] = useState<DataState>(initialData);
@@ -199,6 +206,7 @@ function App() {
   const [error, setError] = useState("");
   const [page, setPage] = useState<PageId>("overview");
   const [sidebar, setSidebar] = useState(true);
+  const [showSecondaryMetrics, setShowSecondaryMetrics] = useState(false);
 
   /* Load data */
   useEffect(() => {
@@ -301,13 +309,15 @@ function App() {
     setFilters({ startDate: dk[0] ?? "", endDate: dk.at(-1) ?? "", branch: "All", loanType: "All", ticketSize: "All", user: "All", customerSegment: "All" });
   }, [data.applications]);
 
+
+
   const pageLabel = NAV.find((n) => n.id === page)?.label ?? "Overview";
 
   if (loading) return <main className="loading-shell"><div className="loader" /><p>Loading dashboard…</p></main>;
   if (error) return <main className="loading-shell"><AlertTriangle size={28} /><p>{error}</p></main>;
 
   /* ═══════════════════════════════════════════
-     Render
+     Render Main Shell
      ═══════════════════════════════════════════ */
   return (
     <div className={`dashboard-shell${sidebar ? "" : " collapsed"}`}>
@@ -323,408 +333,854 @@ function App() {
             <PanelLeftClose size={14} />
           </button>
         </div>
+        
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Dashboard</div>
           {NAV.map((n) => (
-            <button key={n.id} className={`sidebar-link${page === n.id ? " active" : ""}`} onClick={() => setPage(n.id)} type="button">
-              <n.icon />{n.label}
+            <button 
+              key={n.id} 
+              className={`sidebar-link${page === n.id ? " active" : ""}`} 
+              onClick={() => setPage(n.id)} 
+              type="button"
+            >
+              <span className="sidebar-link-content">
+                <n.icon size={18} />
+                <span>{n.label}</span>
+              </span>
+              {n.id === "queue" && <span className="sidebar-badge">{d.pendingOps.length}</span>}
             </button>
           ))}
         </nav>
+
+        {/* Original statistical footer preserved & styled */}
         <div className="sidebar-footer">
-          <div className="sidebar-stat"><span>Records</span><strong>{data.applications.length}</strong></div>
-          <div className="sidebar-stat"><span>Op Logs</span><strong>{data.operations.length}</strong></div>
-          <div className="sidebar-stat"><span>Active Loans</span><strong>{data.repayments.length}</strong></div>
+          <div className="sidebar-stat" style={{ padding: "6px 0", display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-tertiary)" }}>
+            <span>Records</span>
+            <strong style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{data.applications.length}</strong>
+          </div>
+          <div className="sidebar-stat" style={{ padding: "6px 0", display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-tertiary)" }}>
+            <span>Op Logs</span>
+            <strong style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{data.operations.length}</strong>
+          </div>
+          <div className="sidebar-stat" style={{ padding: "6px 0", display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-tertiary)" }}>
+            <span>Active Loans</span>
+            <strong style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{data.repayments.length}</strong>
+          </div>
         </div>
       </aside>
 
-      {/* ─── Top Bar ─── */}
-      <header className="topbar">
-        <div className="topbar-left">
-          {!sidebar && <button className="expand-btn" type="button" onClick={() => setSidebar(true)} title="Expand"><PanelLeft size={16} /></button>}
-          <h2>{pageLabel}</h2>
-          <div className="topbar-badge"><span className="live-dot" />Live</div>
-        </div>
-        <div className="topbar-right">
-          <button className="reset-btn" type="button" onClick={resetFilters}><FilterX size={13} /> Reset</button>
-        </div>
-      </header>
+      {/* ─── Main Content Container ─── */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+        
+        {/* ─── Top Bar (Seamless header) ─── */}
+        <header className="topbar">
+          <div className="topbar-left">
+            {!sidebar && <button className="expand-btn" type="button" onClick={() => setSidebar(true)} title="Expand"><PanelLeft size={16} /></button>}
+            <h2>{pageLabel}</h2>
+            <div className="topbar-badge"><span className="live-dot" />Live</div>
+          </div>
+          <div className="topbar-right">
+            <span className="topbar-tagline">
+              Real-time lending analytics
+            </span>
 
-      {/* ─── Main ─── */}
-      <main className="main-content">
-        {/* Filters — shared across all pages */}
-        <div className="filters-row">
-          <div className="filter-item"><label>Start</label><input type="date" value={filters.startDate} onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))} /></div>
-          <div className="filter-item"><label>End</label><input type="date" value={filters.endDate} onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))} /></div>
-          <div className="filter-item"><label>Branch</label><select value={filters.branch} onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value }))}>{opts.branches.map((o) => <option key={o}>{o}</option>)}</select></div>
-          <div className="filter-item"><label>Loan Type</label><select value={filters.loanType} onChange={(e) => setFilters((f) => ({ ...f, loanType: e.target.value }))}>{opts.loanTypes.map((o) => <option key={o}>{o}</option>)}</select></div>
-          <div className="filter-item"><label>Ticket Size</label><select value={filters.ticketSize} onChange={(e) => setFilters((f) => ({ ...f, ticketSize: e.target.value }))}>{opts.ticketSizes.map((o) => <option key={o}>{o}</option>)}</select></div>
-          <div className="filter-item"><label>User</label><select value={filters.user} onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}>{opts.users.map((o) => <option key={o}>{o}</option>)}</select></div>
-          <div className="filter-item"><label>Segment</label><select value={filters.customerSegment} onChange={(e) => setFilters((f) => ({ ...f, customerSegment: e.target.value }))}>{opts.segments.map((o) => <option key={o}>{o}</option>)}</select></div>
-        </div>
+            {page !== "overview" && (
+              <button className="action-pill" type="button" onClick={() => alert("Exporting page data...")}>
+                <Download size={14} />
+                <span>Export</span>
+              </button>
+            )}
+            <button className="reset-btn" type="button" onClick={resetFilters}><FilterX size={13} /> Reset</button>
+          </div>
+        </header>
 
-        {/* ════════════════════ OVERVIEW ════════════════════ */}
-        {page === "overview" && (
-          <>
-            <div className="page-title">Overview</div>
-            <div className="kpi-row">
-              <div className="kpi"><span className="kpi-label">Applications</span><span className="kpi-value">{d.total.toLocaleString("en-IN")}</span><span className="kpi-sub">Pipeline demand</span></div>
-              <div className="kpi"><span className="kpi-label">Approved</span><span className="kpi-value">{d.approvedCount.toLocaleString("en-IN")}</span><span className="kpi-tag up">{fmtPct(d.approvalRate)} rate</span></div>
-              <div className="kpi"><span className="kpi-label">Disbursed</span><span className="kpi-value">{d.disbursedCount.toLocaleString("en-IN")}</span><span className="kpi-sub">Conversions</span></div>
-              <div className="kpi"><span className="kpi-label">Sanctioned</span><span className="kpi-value">{fmtAmt(d.sanctionedAmt)}</span><span className="kpi-sub">Approved value</span></div>
-              <div className="kpi"><span className="kpi-label">Avg Ticket</span><span className="kpi-value">{fmtAmt(d.avgTicket)}</span><span className="kpi-sub">Per approved loan</span></div>
-            </div>
-            <div className="kpi-row">
-              <div className="kpi"><span className="kpi-label">Rejection Rate</span><span className="kpi-value">{fmtPct(d.rejectionRate)}</span><span className="kpi-tag down">{d.rejectedCount} rejected</span></div>
-              <div className="kpi"><span className="kpi-label">Avg CIBIL</span><span className="kpi-value">{Math.round(d.avgCibil)}</span><span className="kpi-sub">Applicant profile</span></div>
-              <div className="kpi"><span className="kpi-label">Collection Eff.</span><span className="kpi-value">{fmtPct(d.collEff)}</span><span className="kpi-sub">{fmtAmt(d.totalPaid)} collected</span></div>
-              <div className="kpi"><span className="kpi-label">NPA Rate</span><span className="kpi-value">{fmtPct(d.npaRate)}</span><span className="kpi-tag down">{d.npaCount} of {d.activeCount}</span></div>
-              <div className="kpi"><span className="kpi-label">Outstanding</span><span className="kpi-value">{fmtAmt(d.principalOut)}</span><span className="kpi-sub">Active exposure</span></div>
-            </div>
-            <div className="chart-grid full">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Application & Disbursement Trend</h3><p>Monthly pipeline demand vs completed disbursements</p></div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={d.monthly} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.slate} stopOpacity={0.1} /><stop offset="100%" stopColor={C.slate} stopOpacity={0.01} /></linearGradient>
-                      <linearGradient id="gD" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.teal} stopOpacity={0.15} /><stop offset="100%" stopColor={C.teal} stopOpacity={0.01} /></linearGradient>
-                    </defs>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="applications" name="Applications" stroke={C.slate} strokeWidth={2} fill="url(#gA)" dot={{ r: 3 }} isAnimationActive={false} />
-                    <Area type="monotone" dataKey="disbursed" name="Disbursed" stroke={C.teal} strokeWidth={2} fill="url(#gD)" dot={{ r: 3 }} isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Branch Volume</h3><p>Application count by branch location</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={d.branchApps} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="Applications" fill={C.slate} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Product Mix</h3><p>Loan type distribution</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie data={d.loanMix} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={85} strokeWidth={2} stroke="#fff" isAnimationActive={false} label={({ name, value, cx, x, y }) => <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#1d1d1f" fontSize={11} fontWeight={500}>{name} ({value})</text>}>
-                      {d.loanMix.map((_, i) => <Cell key={`ov-pie-${i}`} fill={C.pie[i % C.pie.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        )}
+        {/* ─── Content ─── */}
+        <main className="main-content">
+          
+          {/* Shared Filters Panel */}
+          <div className="filters-row">
+            <div className="filter-item"><label>Start Date</label><input type="date" value={filters.startDate} onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))} /></div>
+            <div className="filter-item"><label>End Date</label><input type="date" value={filters.endDate} onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))} /></div>
+            <div className="filter-item"><label>Branch</label><select value={filters.branch} onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value }))}>{opts.branches.map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div className="filter-item"><label>Loan Type</label><select value={filters.loanType} onChange={(e) => setFilters((f) => ({ ...f, loanType: e.target.value }))}>{opts.loanTypes.map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div className="filter-item"><label>Ticket Size</label><select value={filters.ticketSize} onChange={(e) => setFilters((f) => ({ ...f, ticketSize: e.target.value }))}>{opts.ticketSizes.map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div className="filter-item"><label>Assigned User</label><select value={filters.user} onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}>{opts.users.map((o) => <option key={o}>{o}</option>)}</select></div>
+            <div className="filter-item"><label>Segment</label><select value={filters.customerSegment} onChange={(e) => setFilters((f) => ({ ...f, customerSegment: e.target.value }))}>{opts.segments.map((o) => <option key={o}>{o}</option>)}</select></div>
+          </div>
 
-        {/* ════════════════════ SALES ════════════════════ */}
-        {page === "sales" && (
-          <>
-            <div className="page-title">Sales & Pipeline</div>
-            <div className="kpi-row">
-              <div className="kpi"><span className="kpi-label">Rejection Rate</span><span className="kpi-value">{fmtPct(d.rejectionRate)}</span><span className="kpi-tag down">{d.rejectedCount} rejected</span></div>
-              <div className="kpi"><span className="kpi-label">Pending Review</span><span className="kpi-value">{d.pendingCount}</span><span className="kpi-sub">In-progress</span></div>
-              <div className="kpi"><span className="kpi-label">Avg CIBIL</span><span className="kpi-value">{Math.round(d.avgCibil)}</span><span className="kpi-sub">Applicant profile</span></div>
-              <div className="kpi"><span className="kpi-label">Avg Ticket</span><span className="kpi-value">{fmtAmt(d.avgTicket)}</span><span className="kpi-sub">Per approved loan</span></div>
-              <div className="kpi"><span className="kpi-label">Sanctioned Value</span><span className="kpi-value">{fmtAmt(d.sanctionedAmt)}</span><span className="kpi-sub">Total committed</span></div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Branch Performance</h3><p>Application volume by branch</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.branchApps} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="Applications" fill={C.slate} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Product Mix</h3><p>Loan type distribution</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie data={d.loanMix} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={90} strokeWidth={2} stroke="#fff" isAnimationActive={false} label={({ name, value, cx, x, y }) => <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#1d1d1f" fontSize={11} fontWeight={500}>{name} ({value})</text>}>
-                      {d.loanMix.map((_, i) => <Cell key={`pm-${i}`} fill={C.pie[i % C.pie.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="chart-grid full">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Monthly Sanctioned Value</h3><p>Sanctioned amount trend over time (₹ Lakhs)</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={d.monthly} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
-                    <Line type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.teal} strokeWidth={2} dot={{ r: 3, fill: C.teal, strokeWidth: 0 }} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ════════════════════ CREDIT ════════════════════ */}
-        {page === "credit" && (
-          <>
-            <div className="page-title">Credit Quality</div>
-            <div className="kpi-row cols-4">
-              <div className="kpi"><span className="kpi-label">Avg CIBIL</span><span className="kpi-value">{Math.round(d.avgCibil)}</span><span className="kpi-sub">Applicant profile</span></div>
-              <div className="kpi"><span className="kpi-label">Approval Rate</span><span className="kpi-value">{fmtPct(d.approvalRate)}</span><span className="kpi-tag up">{d.approvedCount} approved</span></div>
-              <div className="kpi"><span className="kpi-label">Rejection Rate</span><span className="kpi-value">{fmtPct(d.rejectionRate)}</span><span className="kpi-tag down">{d.rejectedCount} rejected</span></div>
-              <div className="kpi"><span className="kpi-label">NPA Rate</span><span className="kpi-value">{fmtPct(d.npaRate)}</span><span className="kpi-sub">{d.npaCount} of {d.activeCount} loans</span></div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Approval Rate by CIBIL Band</h3><p>Credit score tier vs approval outcome</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.cibilBands} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`${v}%`, "Approval Rate"]} />
-                    <Bar dataKey="approvalRate" name="Approval %" fill={C.indigo} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Segment Risk Profile</h3><p>Collection efficiency vs NPA rate by segment</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`${v}%`]} />
-                    <Bar dataKey="collEff" name="Collection Eff." fill={C.teal} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                    <Bar dataKey="npaRate" name="NPA Rate" fill={C.coral} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Applications per CIBIL Band</h3><p>Volume distribution across credit tiers</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={d.cibilBands} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="count" name="Applications" fill={C.sage} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Segment Distribution</h3><p>Application count by customer segment</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="count" name="Applications" fill={C.indigo} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ════════════════════ OPERATIONS ════════════════════ */}
-        {page === "operations" && (
-          <>
-            <div className="page-title">Operations</div>
-            <div className="metric-strip">
-              {d.stageTat.map((s) => (
-                <div className="metric-cell" key={s.name}>
-                  <span className="m-label">{s.name}</span>
-                  <span className="m-value">{s.hours}h</span>
-                  <span className="m-sub">{s.pending} pending</span>
-                </div>
-              ))}
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Stage Turnaround Time</h3><p>Average hours per processing stage</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.stageTat} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="hours" name="Avg TAT (hrs)" fill={C.indigo} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Pending Load by Stage</h3><p>Cases awaiting action per stage</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.stageTat} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="pending" name="Pending" fill={C.amber} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ════════════════════ PORTFOLIO ════════════════════ */}
-        {page === "portfolio" && (
-          <>
-            <div className="page-title">Portfolio Health</div>
-            <div className="kpi-row">
-              <div className="kpi"><span className="kpi-label">Principal Outstanding</span><span className="kpi-value">{fmtAmt(d.principalOut)}</span><span className="kpi-sub">Active exposure</span></div>
-              <div className="kpi"><span className="kpi-label">Collection Efficiency</span><span className="kpi-value">{fmtPct(d.collEff)}</span><span className="kpi-sub">{fmtAmt(d.totalPaid)} collected</span></div>
-              <div className="kpi"><span className="kpi-label">Total Due</span><span className="kpi-value">{fmtAmt(d.totalDue)}</span><span className="kpi-sub">Current month</span></div>
-              <div className="kpi"><span className="kpi-label">NPA Rate</span><span className="kpi-value">{fmtPct(d.npaRate)}</span><span className="kpi-tag down">{d.npaCount} of {d.activeCount}</span></div>
-              <div className="kpi"><span className="kpi-label">Active Loans</span><span className="kpi-value">{d.activeCount}</span><span className="kpi-sub">With repayment</span></div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>DPD Distribution</h3><p>Days past due buckets across active loans</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={d.dpdDist} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis allowDecimals={false} {...AXIS} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="Loans" isAnimationActive={false} radius={[3, 3, 0, 0]}>
-                      {d.dpdDist.map((e, i) => <Cell key={`dpd-${i}`} fill={e.name === "0 DPD" ? C.teal : e.name === "1-30" ? C.sage : e.name === "31-60" ? C.amber : C.coral} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Sanctioned Value Trend</h3><p>Monthly sanctioned amount (₹ Lakhs)</p></div>
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={d.monthly} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} />
-                    <YAxis {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
-                    <Line type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.indigo} strokeWidth={2} dot={{ r: 3, fill: C.indigo, strokeWidth: 0 }} isAnimationActive={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="chart-grid">
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Segment Collection Performance</h3><p>Collection efficiency by customer segment</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`${v}%`]} />
-                    <Bar dataKey="collEff" name="Collection Eff." fill={C.teal} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="chart-panel">
-                <div className="chart-panel-header"><h3>Segment NPA Exposure</h3><p>NPA rate across customer segments</p></div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
-                    <CartesianGrid {...GRID} />
-                    <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
-                    <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
-                    <Tooltip formatter={(v: any) => [`${v}%`]} />
-                    <Bar dataKey="npaRate" name="NPA Rate" fill={C.coral} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ════════════════════ PENDING QUEUE ════════════════════ */}
-        {page === "queue" && (() => {
-          const pendByStage = groupCount(d.pendingOps, (r) => stageLabel(r.stage));
-          const pendByUser = groupCount(d.pendingOps, (r) => r.assignedTo).slice(0, 6);
-          return (
+          {/* ════════════════════ OVERVIEW PAGE ════════════════════ */}
+          {page === "overview" && (
             <>
-              <div className="page-title">Pending Queue</div>
-              <div className="kpi-row cols-4">
-                <div className="kpi"><span className="kpi-label">Pending Cases</span><span className="kpi-value">{d.pendingOps.length}</span><span className="kpi-sub">Total backlog</span></div>
-                <div className="kpi"><span className="kpi-label">Stages Active</span><span className="kpi-value">{new Set(d.pendingOps.map((r) => r.stage)).size}</span><span className="kpi-sub">With pending work</span></div>
-                <div className="kpi"><span className="kpi-label">Assigned Users</span><span className="kpi-value">{new Set(d.pendingOps.map((r) => r.assignedTo)).size}</span><span className="kpi-sub">Handling cases</span></div>
-                <div className="kpi"><span className="kpi-label">Branches</span><span className="kpi-value">{new Set(d.pendingOps.map((r) => r.branch)).size}</span><span className="kpi-sub">With pending ops</span></div>
+              {/* Row 1 of 5 original KPI cards */}
+              <div className="kpi-row">
+                
+                {/* 1. Applications */}
+                <div className="kpi">
+                  <div className="kpi-header">
+                    <div className="kpi-icon-wrap indigo"><ShoppingBag size={16} /></div>
+                    <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                  </div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Applications</span>
+                    <div className="kpi-value">{d.total.toLocaleString("en-IN")}</div>
+                    <div className="kpi-sub"><span>Pipeline demand</span></div>
+                  </div>
+                </div>
+
+                {/* 2. Approved */}
+                <div className="kpi">
+                  <div className="kpi-header">
+                    <div className="kpi-icon-wrap green"><ShieldCheck size={16} /></div>
+                    <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                  </div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Approved</span>
+                    <div className="kpi-value">{d.approvedCount.toLocaleString("en-IN")}</div>
+                    <div className="kpi-sub">
+                      <span className="kpi-change-tag up">{fmtPct(d.approvalRate)}</span>
+                      <span>rate</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Disbursed */}
+                <div className="kpi">
+                  <div className="kpi-header">
+                    <div className="kpi-icon-wrap teal"><Activity size={16} /></div>
+                    <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                  </div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Disbursed</span>
+                    <div className="kpi-value">{d.disbursedCount.toLocaleString("en-IN")}</div>
+                    <div className="kpi-sub"><span>Conversions</span></div>
+                  </div>
+                </div>
+
+                {/* 4. Sanctioned */}
+                <div className="kpi">
+                  <div className="kpi-header">
+                    <div className="kpi-icon-wrap blue"><Landmark size={16} /></div>
+                    <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                  </div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Sanctioned</span>
+                    <div className="kpi-value">{fmtAmt(d.sanctionedAmt)}</div>
+                    <div className="kpi-sub"><span>Approved value</span></div>
+                  </div>
+                </div>
+
+                {/* 5. Avg Ticket */}
+                <div className="kpi">
+                  <div className="kpi-header">
+                    <div className="kpi-icon-wrap teal"><TrendingUp size={16} /></div>
+                    <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                  </div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Avg Ticket</span>
+                    <div className="kpi-value">{fmtAmt(d.avgTicket)}</div>
+                    <div className="kpi-sub"><span>Per approved loan</span></div>
+                  </div>
+                </div>
+
               </div>
-              <div className="chart-grid">
+
+              {/* Secondary KPIs Row - 5 remaining indicators (Rearranged for 5-column grid) */}
+              {showSecondaryMetrics && (
+                <div className="secondary-metrics-wrap">
+                  <div className="kpi-row">
+                    
+                    {/* 6. Rejection Rate */}
+                    <div className="kpi">
+                      <div className="kpi-header">
+                        <div className="kpi-icon-wrap coral"><AlertTriangle size={16} /></div>
+                        <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">Rejection Rate</span>
+                        <div className="kpi-value">{fmtPct(d.rejectionRate)}</div>
+                        <div className="kpi-sub">
+                          <span className="kpi-change-tag down">{d.rejectedCount}</span>
+                          <span>rejected</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 7. Avg CIBIL */}
+                    <div className="kpi">
+                      <div className="kpi-header">
+                        <div className="kpi-icon-wrap indigo"><Users size={16} /></div>
+                        <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">Avg CIBIL</span>
+                        <div className="kpi-value">{Math.round(d.avgCibil)}</div>
+                        <div className="kpi-sub"><span>Applicant profile</span></div>
+                      </div>
+                    </div>
+
+                    {/* 8. Collection Eff. */}
+                    <div className="kpi">
+                      <div className="kpi-header">
+                        <div className="kpi-icon-wrap green"><TrendingUp size={16} /></div>
+                        <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">Collection Eff.</span>
+                        <div className="kpi-value">{fmtPct(d.collEff)}</div>
+                        <div className="kpi-sub"><span>{fmtAmt(d.totalPaid)} collected</span></div>
+                      </div>
+                    </div>
+
+                    {/* 9. NPA Rate */}
+                    <div className="kpi">
+                      <div className="kpi-header">
+                        <div className="kpi-icon-wrap coral"><AlertTriangle size={16} /></div>
+                        <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">NPA Rate</span>
+                        <div className="kpi-value">{fmtPct(d.npaRate)}</div>
+                        <div className="kpi-sub">
+                          <span className="kpi-change-tag down">{d.npaCount}</span>
+                          <span>of {d.activeCount} active</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 10. Outstanding */}
+                    <div className="kpi">
+                      <div className="kpi-header">
+                        <div className="kpi-icon-wrap blue"><Landmark size={16} /></div>
+                        <button className="kpi-info-btn" type="button" title="View details"><HelpCircle size={14} /></button>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">Outstanding</span>
+                        <div className="kpi-value">{fmtAmt(d.principalOut)}</div>
+                        <div className="kpi-sub"><span>Active exposure</span></div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* See More Metrics Toggle Button */}
+              <div style={{ margin: "6px 0 10px 0", display: "flex", justifyContent: "flex-end" }}>
+                <button 
+                  className="action-pill" 
+                  onClick={() => setShowSecondaryMetrics(!showSecondaryMetrics)}
+                  type="button"
+                >
+                  <span>{showSecondaryMetrics ? "Hide Additional Metrics" : "See More Metrics"}</span>
+                  <ChevronDown size={14} style={{ transform: showSecondaryMetrics ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                </button>
+              </div>
+
+              {/* Redesigned Charts (Original Overview Selection) */}
+              <div className="chart-grid full">
+                {/* 1. Application & Disbursement Trend (Full width) */}
                 <div className="chart-panel">
-                  <div className="chart-panel-header"><h3>Pending by Stage</h3><p>Backlog distribution across processing stages</p></div>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={pendByStage} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group">
+                      <h3>Application & Disbursement Trend</h3>
+                      <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "2px" }}>Monthly pipeline demand vs completed disbursements</p>
+                    </div>
+
+                  </div>
+                  
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={d.monthly} margin={{ top: 8, right: 20, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="areaGradApps" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.0} />
+                        </linearGradient>
+                        <linearGradient id="areaGradDisb" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#0d9488" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#0d9488" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid {...GRID} />
-                      <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 10 }} />
+                      <XAxis dataKey="name" {...AXIS} />
                       <YAxis allowDecimals={false} {...AXIS} />
                       <Tooltip />
-                      <Bar dataKey="value" name="Pending" fill={C.amber} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="chart-panel">
-                  <div className="chart-panel-header"><h3>Workload by User</h3><p>Top assigned users by pending case count</p></div>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={pendByUser} layout="vertical" margin={{ top: 8, right: 16, left: 10, bottom: 0 }}>
-                      <CartesianGrid {...GRID} horizontal={false} vertical />
-                      <XAxis type="number" allowDecimals={false} {...AXIS} />
-                      <YAxis type="category" dataKey="name" width={80} {...AXIS} tick={{ fontSize: 10 }} />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Cases" fill={C.indigo} radius={[0, 3, 3, 0]} isAnimationActive={false} />
-                    </BarChart>
+                      <Area 
+                        type="monotone" 
+                        dataKey="applications" 
+                        name="Applications" 
+                        stroke="#6366f1" 
+                        strokeWidth={2} 
+                        fill="url(#areaGradApps)" 
+                        dot={{ r: 4, strokeWidth: 0, fill: "#6366f1" }}
+                        activeDot={{ r: 6 }}
+                        isAnimationActive={false} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="disbursed" 
+                        name="Disbursed" 
+                        stroke="#0d9488" 
+                        strokeWidth={2} 
+                        fill="url(#areaGradDisb)" 
+                        dot={{ r: 4, strokeWidth: 0, fill: "#0d9488" }}
+                        activeDot={{ r: 6 }}
+                        isAnimationActive={false} 
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="data-table-wrap">
-                <div className="data-table-header"><h3>Operations Follow-Up</h3><p>{d.pendingOps.length} cases pending across all stages</p></div>
-                <div className="data-table-scroll">
-                  <table>
-                    <thead><tr><th>Application ID</th><th>Stage</th><th>Assigned To</th><th>Start Date</th><th>Branch</th><th>Loan Type</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {d.pendingOps.length === 0
-                        ? <tr><td colSpan={7} className="empty-state">No pending cases for selected filters.</td></tr>
-                        : d.pendingOps.map((r) => (
-                          <tr key={r.logId}>
-                            <td>{r.applicationId}</td>
-                            <td>{stageLabel(r.stage)}</td>
-                            <td>{r.assignedTo}</td>
-                            <td>{r.stageStart.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                            <td>{r.branch}</td>
-                            <td>{r.loanType}</td>
-                            <td><span className="badge pending">Pending</span></td>
-                          </tr>
-                        ))
-                      }
-                    </tbody>
-                  </table>
+
+              <div className="chart-grid">
+                {/* 2. Branch Volume (Rounded Bar Chart with tracks) */}
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group">
+                      <h3>Branch Volume</h3>
+                      <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "2px" }}>Application count by branch location</p>
+                    </div>
+                  </div>
+                  
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.branchApps} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar 
+                        dataKey="value" 
+                        name="Applications" 
+                        fill="#6366f1" 
+                        radius={[8, 8, 0, 0]}
+                        background={{ fill: "#f2f4f7", radius: 8 }}
+                        isAnimationActive={false} 
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 3. Product Mix (Pie Chart) */}
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group">
+                      <h3>Product Mix</h3>
+                      <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "2px" }}>Loan type distribution</p>
+                    </div>
+                  </div>
+                  
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie 
+                        data={d.loanMix} 
+                        dataKey="value" 
+                        nameKey="name" 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={45} 
+                        outerRadius={85} 
+                        strokeWidth={2} 
+                        stroke="#fff" 
+                        isAnimationActive={false} 
+                        label={({ name, value, cx, x, y }) => (
+                          <text 
+                            x={x} 
+                            y={y} 
+                            textAnchor={x > cx ? "start" : "end"} 
+                            dominantBaseline="central" 
+                            fill="var(--text-primary)" 
+                            fontSize={11} 
+                            fontWeight={500}
+                          >
+                            {name} ({value})
+                          </text>
+                        )}
+                      >
+                        {d.loanMix.map((_, i) => <Cell key={`ov-pie-${i}`} fill={C.pie[i % C.pie.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </>
-          );
-        })()}
+          )}
 
-      </main>
+          {/* ════════════════════ SALES PAGE ════════════════════ */}
+          {page === "sales" && (
+            <>
+              <div className="kpi-row cols-4">
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap coral"><AlertTriangle size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Rejection Rate</span>
+                    <div className="kpi-value">{fmtPct(d.rejectionRate)}</div>
+                    <div className="kpi-sub"><span className="kpi-change-tag down">{d.rejectedCount} rejected</span></div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap amber"><Clock size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Pending Review</span>
+                    <div className="kpi-value">{d.pendingCount}</div>
+                    <div className="kpi-sub">Cases awaiting credit check</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap indigo"><Users size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Average CIBIL Score</span>
+                    <div className="kpi-value">{Math.round(d.avgCibil)}</div>
+                    <div className="kpi-sub">Applicants tier credit mix</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap green"><Landmark size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Sanctioned Value</span>
+                    <div className="kpi-value">{fmtAmt(d.sanctionedAmt)}</div>
+                    <div className="kpi-sub">Total credit volume approved</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="chart-grid">
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Branch Performance</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.branchApps} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="value" name="Applications" fill={C.indigo} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Product Mix (Loan Types)</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={d.loanMix} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={85} strokeWidth={2} stroke="#fff" isAnimationActive={false} label={({ name, value, cx, x, y }) => <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#101828" fontSize={11} fontWeight={500}>{name} ({value})</text>}>
+                        {d.loanMix.map((_, i) => <Cell key={`pm-${i}`} fill={C.pie[i % C.pie.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="chart-panel" style={{ width: "100%" }}>
+                <div className="chart-panel-header">
+                  <div className="chart-title-group"><h3>Monthly Sanctioned Trend</h3></div>
+                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={d.monthly} margin={{ top: 8, right: 20, left: -20, bottom: 0 }}>
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="name" {...AXIS} />
+                    <YAxis {...AXIS} />
+                    <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
+                    <Line type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.indigo} strokeWidth={2} dot={{ r: 4, fill: C.indigo, strokeWidth: 0 }} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════ CREDIT PAGE ════════════════════ */}
+          {page === "credit" && (
+            <>
+              <div className="kpi-row cols-4">
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap indigo"><Users size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Average CIBIL</span>
+                    <div className="kpi-value">{Math.round(d.avgCibil)}</div>
+                    <div className="kpi-sub">Applicants risk scoring</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap green"><ShieldCheck size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Approval Rate</span>
+                    <div className="kpi-value">{fmtPct(d.approvalRate)}</div>
+                    <div className="kpi-sub"><span className="kpi-change-tag up">{d.approvedCount} Approved</span></div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap coral"><AlertTriangle size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Rejection Rate</span>
+                    <div className="kpi-value">{fmtPct(d.rejectionRate)}</div>
+                    <div className="kpi-sub"><span className="kpi-change-tag down">{d.rejectedCount} Rejected</span></div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap blue"><Activity size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">NPA Rate</span>
+                    <div className="kpi-value">{fmtPct(d.npaRate)}</div>
+                    <div className="kpi-sub">{d.npaCount} accounts in NPA list</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="chart-grid">
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Approval Rate by CIBIL Tier</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.cibilBands} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
+                      <Tooltip formatter={(v: any) => [`${v}%`, "Approval Rate"]} />
+                      <Bar dataKey="approvalRate" name="Approval %" fill={C.indigo} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Segment Risk Analysis</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 9 }} />
+                      <YAxis tickFormatter={(v) => `${v}%`} {...AXIS} />
+                      <Tooltip formatter={(v: any) => [`${v}%`]} />
+                      <Bar dataKey="collEff" name="Collection Eff." fill={C.teal} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                      <Bar dataKey="npaRate" name="NPA Rate" fill={C.coral} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="chart-grid">
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Submissions by CIBIL Band</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={d.cibilBands} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="count" name="Applications" fill={C.sage} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Segment Distribution</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={d.segs} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 9 }} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="count" name="Applications" fill={C.indigo} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════ OPERATIONS PAGE ════════════════════ */}
+          {page === "operations" && (
+            <>
+              <div className="kpi-row cols-4">
+                {d.stageTat.map((s, idx) => {
+                  const Icon = [Users, ShieldCheck, Clock, Landmark][idx % 4];
+                  const color = ["indigo", "green", "amber", "blue"][idx % 4];
+                  return (
+                    <div className="kpi" key={s.name}>
+                      <div className="kpi-header">
+                        <div className={`kpi-icon-wrap ${color}`}>
+                          <Icon size={20} />
+                        </div>
+                      </div>
+                      <div className="kpi-body">
+                        <span className="kpi-label">{s.name} TAT</span>
+                        <div className="kpi-value">{s.hours} Hrs</div>
+                        <div className="kpi-sub">
+                          <span>{s.pending} cases pending</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="chart-grid">
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Stage Turnaround Time (TAT)</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.stageTat} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 9 }} />
+                      <YAxis {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="hours" name="Avg TAT (Hrs)" fill={C.indigo} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Stage Load (Pending backlog)</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.stageTat} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 9 }} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="pending" name="Pending Cases" fill={C.amber} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════ PORTFOLIO PAGE ════════════════════ */}
+          {page === "portfolio" && (
+            <>
+              <div className="kpi-row cols-4">
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap blue"><Landmark size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Principal Outstanding</span>
+                    <div className="kpi-value">{fmtAmt(d.principalOut)}</div>
+                    <div className="kpi-sub">Total active credit exposure</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap green"><TrendingUp size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Collection Efficiency</span>
+                    <div className="kpi-value">{fmtPct(d.collEff)}</div>
+                    <div className="kpi-sub">{fmtAmt(d.totalPaid)} collected out of {fmtAmt(d.totalDue)} due</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap coral"><AlertTriangle size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">NPA Rate</span>
+                    <div className="kpi-value">{fmtPct(d.npaRate)}</div>
+                    <div className="kpi-sub">{d.npaCount} active NPA loan accounts</div>
+                  </div>
+                </div>
+
+                <div className="kpi">
+                  <div className="kpi-header"><div className="kpi-icon-wrap indigo"><Users size={20} /></div></div>
+                  <div className="kpi-body">
+                    <span className="kpi-label">Active Loans</span>
+                    <div className="kpi-value">{d.activeCount.toLocaleString("en-IN")}</div>
+                    <div className="kpi-sub">With active repayment schedules</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="chart-grid">
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Days Past Due (DPD) Distribution</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.dpdDist} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis allowDecimals={false} {...AXIS} />
+                      <Tooltip />
+                      <Bar dataKey="value" name="Loans" isAnimationActive={false} radius={[6, 6, 0, 0]}>
+                        {d.dpdDist.map((e, i) => <Cell key={`dpd-${i}`} fill={e.name === "0 DPD" ? C.teal : e.name === "1-30" ? C.sage : e.name === "31-60" ? C.amber : C.coral} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div className="chart-title-group"><h3>Sanctioned Amount Trend</h3></div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={d.monthly} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="indigoAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.00} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid {...GRID} />
+                      <XAxis dataKey="name" {...AXIS} />
+                      <YAxis {...AXIS} />
+                      <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(1)} L`, "Sanctioned"]} />
+                      <Area type="monotone" dataKey="sanctionedAmt" name="Sanctioned (₹L)" stroke={C.indigo} strokeWidth={2} fill="url(#indigoAreaGrad)" dot={{ r: 4, fill: C.indigo, strokeWidth: 0 }} isAnimationActive={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════ PENDING QUEUE PAGE ════════════════════ */}
+          {page === "queue" && (() => {
+            const pendByStage = groupCount(d.pendingOps, (r) => stageLabel(r.stage));
+            const pendByUser = groupCount(d.pendingOps, (r) => r.assignedTo).slice(0, 6);
+            return (
+              <>
+                <div className="kpi-row cols-4">
+                  <div className="kpi">
+                    <div className="kpi-header"><div className="kpi-icon-wrap amber"><Clock size={20} /></div></div>
+                    <div className="kpi-body">
+                      <span className="kpi-label">Pending Backlog</span>
+                      <div className="kpi-value">{d.pendingOps.length}</div>
+                      <div className="kpi-sub">Cases requiring stage reviews</div>
+                    </div>
+                  </div>
+
+                  <div className="kpi">
+                    <div className="kpi-header"><div className="kpi-icon-wrap blue"><Activity size={20} /></div></div>
+                    <div className="kpi-body">
+                      <span className="kpi-label">Stages Active</span>
+                      <div className="kpi-value">{new Set(d.pendingOps.map((r) => r.stage)).size}</div>
+                      <div className="kpi-sub">Departments with pending tasks</div>
+                    </div>
+                  </div>
+
+                  <div className="kpi">
+                    <div className="kpi-header"><div className="kpi-icon-wrap indigo"><Users size={20} /></div></div>
+                    <div className="kpi-body">
+                      <span className="kpi-label">Assigned Credit Officers</span>
+                      <div className="kpi-value">{new Set(d.pendingOps.map((r) => r.assignedTo)).size}</div>
+                      <div className="kpi-sub">Handling pending reviews</div>
+                    </div>
+                  </div>
+
+                  <div className="kpi">
+                    <div className="kpi-header"><div className="kpi-icon-wrap green"><Landmark size={20} /></div></div>
+                    <div className="kpi-body">
+                      <span className="kpi-label">Locations (Branches)</span>
+                      <div className="kpi-value">{new Set(d.pendingOps.map((r) => r.branch)).size}</div>
+                      <div className="kpi-sub">Branches with backlog queue</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="chart-grid">
+                  <div className="chart-panel">
+                    <div className="chart-panel-header">
+                      <div className="chart-title-group"><h3>Pending by Stage</h3></div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={pendByStage} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                        <CartesianGrid {...GRID} />
+                        <XAxis dataKey="name" {...AXIS} interval={0} tick={{ fontSize: 9 }} />
+                        <YAxis allowDecimals={false} {...AXIS} />
+                        <Tooltip />
+                        <Bar dataKey="value" name="Pending Review" fill={C.amber} radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="chart-panel">
+                    <div className="chart-panel-header">
+                      <div className="chart-title-group"><h3>Officer Workload Distribution</h3></div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={pendByUser} layout="vertical" margin={{ top: 8, right: 16, left: 10, bottom: 0 }}>
+                        <CartesianGrid {...GRID} horizontal={false} vertical />
+                        <XAxis type="number" allowDecimals={false} {...AXIS} />
+                        <YAxis type="category" dataKey="name" width={80} {...AXIS} tick={{ fontSize: 9 }} />
+                        <Tooltip />
+                        <Bar dataKey="value" name="Pending Cases" fill={C.indigo} radius={[0, 6, 6, 0]} isAnimationActive={false} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="data-table-wrap">
+                  <div className="data-table-header">
+                    <div className="data-table-header-left">
+                      <h3>Operations Queue List</h3>
+                      <p>{d.pendingOps.length} credit approvals awaiting action</p>
+                    </div>
+                    <div className="data-table-header-actions">
+                      <button className="action-pill" type="button" onClick={() => alert("Downloading queue logs CSV...")}><Download size={14} /><span>Export</span></button>
+                    </div>
+                  </div>
+                  <div className="data-table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th className="table-checkbox-col"><input type="checkbox" className="table-checkbox" /></th>
+                          <th>Application ID</th>
+                          <th>Stage Name</th>
+                          <th>Officer Assigned</th>
+                          <th>Stage Start Date</th>
+                          <th>Branch Location</th>
+                          <th>Loan Type</th>
+                          <th>Risk Status</th>
+                          <th className="table-action-col"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {d.pendingOps.length === 0 ? (
+                          <tr><td colSpan={9} className="empty-state">No pending reviews found.</td></tr>
+                        ) : (
+                          d.pendingOps.map((r) => (
+                            <tr key={r.logId}>
+                              <td className="table-checkbox-col"><input type="checkbox" className="table-checkbox" /></td>
+                              <td className="table-client-name">{r.applicationId}</td>
+                              <td>{stageLabel(r.stage)}</td>
+                              <td>{r.assignedTo}</td>
+                              <td>{r.stageStart.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                              <td>{r.branch}</td>
+                              <td>{r.loanType}</td>
+                              <td>
+                                <span className="badge pending">
+                                  <span className="badge-dot" />
+                                  <span>Pending Approval</span>
+                                </span>
+                              </td>
+                              <td className="table-action-col">
+                                <button className="table-action-btn" type="button"><MoreHorizontal size={14} /></button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
+        </main>
+      </div>
     </div>
   );
 }
